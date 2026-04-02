@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SlideFlow — Создавай. Делись. Вдохновляй.</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --bg3: #1a1a26;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f0f0ff;
+    --text2: #9090b0;
+    --text3: #5a5a7a;
+    --accent: #6c63ff;
+    --accent2: #9d97ff;
+    --accent3: #4a42dd;
+    --pink: #ff6b9d;
+    --teal: #00d4aa;
+    --amber: #ffb347;
+    --r: 12px;
+    --r2: 8px;
+    --font: 'Manrope', sans-serif;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+  /* ===== AUTH ===== */
+  .auth-screen {
+    position: fixed; inset: 0; z-index: 1000;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  .auth-bg {
+    position: absolute; inset: 0; overflow: hidden;
+    background: radial-gradient(ellipse at 20% 50%, rgba(108,99,255,0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(255,107,157,0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 60% 80%, rgba(0,212,170,0.08) 0%, transparent 50%);
+  }
+  .auth-card {
+    position: relative; z-index: 1;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 40px;
+    width: 420px;
+    max-width: calc(100vw - 32px);
+  }
+  .auth-logo { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--accent2); margin-bottom: 8px; }
+  .auth-sub { color: var(--text2); font-size: 13px; margin-bottom: 32px; }
+  .auth-tabs { display: flex; gap: 4px; background: var(--bg3); border-radius: var(--r2); padding: 4px; margin-bottom: 24px; }
+  .auth-tab { flex: 1; padding: 8px; text-align: center; font-size: 13px; font-weight: 500; border-radius: 6px; cursor: pointer; color: var(--text2); transition: all 0.2s; }
+  .auth-tab.active { background: var(--accent); color: white; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; display: block; letter-spacing: 0.5px; text-transform: uppercase; }
+  .form-input {
+    width: 100%; padding: 10px 14px; background: var(--bg3);
+    border: 1px solid var(--border); border-radius: var(--r2);
+    color: var(--text); font-family: var(--font); font-size: 14px;
+    transition: border 0.2s; outline: none;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .btn-primary {
+    width: 100%; padding: 12px; background: var(--accent);
+    border: none; border-radius: var(--r2); color: white;
+    font-family: var(--font); font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; margin-top: 8px;
+  }
+  .btn-primary:hover { background: var(--accent3); transform: translateY(-1px); }
+  .auth-error { color: var(--pink); font-size: 12px; margin-top: 8px; display: none; }
+
+  /* ===== NAVBAR ===== */
+  .navbar {
+    height: 56px; background: var(--bg2); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 20px; gap: 16px; flex-shrink: 0;
+    position: relative; z-index: 100;
+  }
+  .nav-logo { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--accent2); cursor: pointer; flex-shrink: 0; }
+  .nav-tabs { display: flex; gap: 4px; flex: 1; }
+  .nav-tab {
+    padding: 6px 14px; border-radius: var(--r2); font-size: 13px; font-weight: 500;
+    cursor: pointer; color: var(--text2); transition: all 0.2s; border: none; background: none;
+  }
+  .nav-tab.active, .nav-tab:hover { background: var(--bg3); color: var(--text); }
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+  .nav-avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+  }
+  .nav-username { font-size: 13px; font-weight: 500; color: var(--text2); }
+  .btn-create {
+    padding: 7px 16px; background: var(--accent); border: none;
+    border-radius: var(--r2); color: white; font-family: var(--font);
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  }
+  .btn-create:hover { background: var(--accent3); }
+
+  /* ===== MAIN CONTENT ===== */
+  .main-content { flex: 1; overflow-y: auto; min-height: 0; }
+
+  /* ===== FEED ===== */
+  .feed-page { padding: 24px; max-width: 1200px; margin: 0 auto; }
+  .feed-header { margin-bottom: 24px; }
+  .feed-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .feed-sub { color: var(--text2); font-size: 13px; }
+  .presentations-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .pres-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--r); overflow: hidden; cursor: pointer;
+    transition: all 0.25s; position: relative;
+  }
+  .pres-card:hover { transform: translateY(-4px); border-color: var(--border2); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+  .pres-preview {
+    height: 160px; position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pres-preview-slide {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; color: white; padding: 16px;
+    text-align: center; position: relative;
+  }
+  .pres-private-badge {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,0.6); border-radius: 4px; padding: 3px 8px;
+    font-size: 10px; color: var(--text2); font-weight: 500;
+  }
+  .pres-info { padding: 14px; }
+  .pres-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pres-meta { display: flex; align-items: center; justify-content: space-between; }
+  .pres-author { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); cursor: pointer; }
+  .pres-author-avatar { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; }
+  .pres-actions { display: flex; gap: 10px; align-items: center; }
+  .like-btn {
+    display: flex; align-items: center; gap: 4px; background: none; border: none;
+    color: var(--text3); font-size: 12px; cursor: pointer; font-family: var(--font);
+    transition: color 0.2s; padding: 2px;
+  }
+  .like-btn.liked { color: var(--pink); }
+  .like-btn:hover { color: var(--pink); }
+  .like-icon { font-size: 13px; }
+
+  /* ===== PROFILE PAGE ===== */
+  .profile-page { padding: 24px; max-width: 900px; margin: 0 auto; }
+  .profile-header {
+    display: flex; align-items: center; gap: 20px;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 24px; margin-bottom: 24px;
+  }
+  .profile-avatar {
+    width: 72px; height: 72px; border-radius: 50%; background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 700; flex-shrink: 0;
+  }
+  .profile-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .profile-stats { display: flex; gap: 20px; margin-top: 8px; }
+  .profile-stat { font-size: 13px; color: var(--text2); }
+  .profile-stat strong { color: var(--text); font-weight: 600; }
+  .follow-btn {
+    margin-left: auto; padding: 8px 20px; border-radius: var(--r2);
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+  }
+  .follow-btn.following { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
+  .follow-btn.follow { background: var(--accent); border: 1px solid var(--accent); color: white; }
+  .follow-btn:hover { opacity: 0.8; }
+  .profile-pres-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+
+  /* ===== EDITOR ===== */
+  .editor-screen {
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--bg); display: flex; flex-direction: column;
+  }
+  .editor-toolbar {
+    height: 56px; background: var(--bg2); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0;
+  }
+  .editor-title-input {
+    background: none; border: none; color: var(--text); font-family: var(--font);
+    font-size: 15px; font-weight: 600; outline: none; flex: 1;
+  }
+  .editor-title-input::placeholder { color: var(--text3); }
+  .btn-sm {
+    padding: 6px 14px; border-radius: var(--r2); font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: var(--font); transition: all 0.2s; border: none;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); }
+  .btn-accent { background: var(--accent); color: white; }
+  .btn-accent:hover { background: var(--accent3); }
+  .btn-danger { background: rgba(255,107,107,0.15); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.3); }
+  .editor-body { display: flex; flex: 1; min-height: 0; }
+  .slides-panel {
+    width: 180px; background: var(--bg2); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 12px; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .slide-thumb {
+    border-radius: 6px; overflow: hidden; cursor: pointer;
+    border: 2px solid transparent; transition: border 0.2s; flex-shrink: 0;
+  }
+  .slide-thumb.active { border-color: var(--accent); }
+  .slide-thumb:hover { border-color: var(--border2); }
+  .slide-thumb-inner {
+    height: 90px; display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 600; color: white; text-align: center; padding: 8px;
+    position: relative;
+  }
+  .slide-num {
+    position: absolute; bottom: 4px; left: 4px;
+    font-size: 9px; color: rgba(255,255,255,0.6); font-weight: 500;
+  }
+  .add-slide-btn {
+    width: 100%; padding: 8px; background: var(--bg3); border: 1px dashed var(--border2);
+    border-radius: 6px; color: var(--text2); font-size: 12px; font-weight: 500;
+    cursor: pointer; font-family: var(--font); transition: all 0.2s; flex-shrink: 0;
+  }
+  .add-slide-btn:hover { border-color: var(--accent); color: var(--accent2); }
+  .canvas-area {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); padding: 24px; overflow: hidden; position: relative;
+  }
+  .slide-canvas {
+    aspect-ratio: 16/9; width: min(100%, calc((100vh - 56px - 48px) * 16/9));
+    border-radius: 8px; overflow: hidden; position: relative;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 24px 80px rgba(0,0,0,0.6);
+  }
+  .slide-inner {
+    width: 100%; height: 100%; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .slide-content-area {
+    position: absolute; inset: 0; padding: 48px;
+    display: flex; flex-direction: column; justify-content: center; gap: 12px;
+    z-index: 2;
+  }
+  .slide-text-block {
+    outline: none; cursor: text; transition: background 0.15s;
+    border-radius: 4px; padding: 4px 6px; min-height: 20px;
+  }
+  .slide-text-block:focus { background: rgba(255,255,255,0.05); }
+  .slide-heading { font-size: clamp(18px, 3.5vw, 36px); font-weight: 700; color: white; line-height: 1.2; }
+  .slide-body { font-size: clamp(11px, 1.8vw, 18px); color: rgba(255,255,255,0.8); line-height: 1.5; }
+  .properties-panel {
+    width: 220px; background: var(--bg2); border-left: 1px solid var(--border);
+    padding: 16px; overflow-y: auto; flex-shrink: 0;
+  }
+  .prop-section { margin-bottom: 20px; }
+  .prop-title { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+  .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
+  .color-swatch {
+    aspect-ratio: 1; border-radius: 6px; cursor: pointer;
+    border: 2px solid transparent; transition: transform 0.15s, border 0.15s;
+  }
+  .color-swatch:hover { transform: scale(1.1); }
+  .color-swatch.active { border-color: white; transform: scale(1.1); }
+  .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .layout-btn {
+    padding: 8px 6px; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text2); font-size: 10px; font-weight: 500;
+    cursor: pointer; font-family: var(--font); text-align: center; transition: all 0.15s;
+  }
+  .layout-btn:hover, .layout-btn.active { border-color: var(--accent); color: var(--accent2); background: rgba(108,99,255,0.1); }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .toggle-label { font-size: 13px; color: var(--text2); }
+  .toggle {
+    width: 36px; height: 20px; background: var(--bg3); border-radius: 10px;
+    cursor: pointer; position: relative; transition: background 0.2s; border: 1px solid var(--border);
+  }
+  .toggle.on { background: var(--accent); border-color: var(--accent); }
+  .toggle-knob {
+    position: absolute; width: 14px; height: 14px; background: white;
+    border-radius: 50%; top: 2px; left: 2px; transition: left 0.2s;
+  }
+  .toggle.on .toggle-knob { left: 18px; }
+
+  /* ===== VIEWER ===== */
+  .viewer-screen {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,0.92); display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .viewer-top {
+    position: absolute; top: 0; left: 0; right: 0; height: 56px;
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 20px; gap: 12px;
+  }
+  .viewer-slide-wrap {
+    width: min(90vw, calc(80vh * 16/9));
+    aspect-ratio: 16/9;
+    border-radius: 8px; overflow: hidden;
+    box-shadow: 0 32px 100px rgba(0,0,0,0.8);
+  }
+  .viewer-nav {
+    display: flex; align-items: center; gap: 16px;
+    position: absolute; bottom: 24px;
+  }
+  .nav-arr {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--bg2);
+    border: 1px solid var(--border2); color: var(--text); font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .nav-arr:hover { background: var(--bg3); }
+  .nav-count { font-size: 13px; color: var(--text2); }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  .hidden { display: none !important; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text2); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 15px; font-weight: 500; margin-bottom: 8px; color: var(--text); }
+  .empty-sub { font-size: 13px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px;
+    padding: 10px 20px; font-size: 13px; z-index: 9999; transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .toast.hidden { opacity: 0; }
+
+  .search-input {
+    flex: 1; max-width: 300px; padding: 7px 14px; background: var(--bg3);
+    border: 1px solid var(--border); border-radius: var(--r2);
+    color: var(--text); font-family: var(--font); font-size: 13px; outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .slide-deco { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+</style>
+</head>
+<body>
+
+<div class="toast hidden" id="toast"></div>
+
+<!-- AUTH -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-bg"></div>
+  <div class="auth-card">
+    <div class="auth-logo">✦ SlideFlow</div>
+    <div class="auth-sub">Создавай. Делись. Вдохновляй.</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Войти</div>
+      <div class="auth-tab" id="registerTab" onclick="switchAuthTab('register')">Регистрация</div>
+    </div>
+    <div id="loginForm">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="loginEmail" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Пароль</label>
+        <input class="form-input" type="password" id="loginPassword" placeholder="••••••••">
+      </div>
+      <div class="auth-error" id="loginError">Неверный email или пароль</div>
+      <button class="btn-primary" onclick="doLogin()">Войти</button>
+      <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--text3)">Демо: demo@slideflow.app / demo123</div>
+    </div>
+    <div id="registerForm" class="hidden">
+      <div class="form-group">
+        <label class="form-label">Имя пользователя</label>
+        <input class="form-input" type="text" id="regUsername" placeholder="your_name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="regEmail" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Пароль</label>
+        <input class="form-input" type="password" id="regPassword" placeholder="Минимум 6 символов">
+      </div>
+      <div class="auth-error" id="regError"></div>
+      <button class="btn-primary" onclick="doRegister()">Создать аккаунт</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app hidden" id="appScreen">
+  <nav class="navbar">
+    <div class="nav-logo" onclick="goPage('feed')">✦ SlideFlow</div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="navFeed" onclick="goPage('feed')">Лента</button>
+      <button class="nav-tab" id="navMy" onclick="goPage('my')">Мои</button>
+      <button class="nav-tab" id="navFollowing" onclick="goPage('following')">Подписки</button>
+    </div>
+    <div class="nav-right">
+      <input class="search-input" type="text" placeholder="Поиск..." id="searchInput" oninput="renderFeed()">
+      <button class="btn-create" onclick="openEditor(null)"><span style="font-size:16px;line-height:1">+</span> Создать</button>
+      <div class="nav-username" id="navUsername"></div>
+      <div class="nav-avatar" id="navAvatar" onclick="goPage('profile_me')"></div>
+    </div>
+  </nav>
+  <div class="main-content" id="mainContent"></div>
+</div>
+
+<!-- EDITOR -->
+<div class="editor-screen hidden" id="editorScreen">
+  <div class="editor-toolbar">
+    <button class="btn-sm btn-ghost" onclick="closeEditor()">← Назад</button>
+    <input class="editor-title-input" id="editorTitleInput" placeholder="Название презентации...">
+    <span style="font-size:12px;color:var(--text3);margin:0 8px" id="slideCounter"></span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:12px;color:var(--text2)">Приватная</span>
+      <div class="toggle" id="privacyToggle" onclick="togglePrivacy()"><div class="toggle-knob"></div></div>
+    </div>
+    <button class="btn-sm btn-ghost" onclick="exportPDF()">📄 PDF</button>
+    <button class="btn-sm btn-accent" onclick="savePresentation()">Сохранить</button>
+  </div>
+  <div class="editor-body">
+    <div class="slides-panel" id="slidesPanel"></div>
+    <div class="canvas-area">
+      <div class="slide-canvas" id="slideCanvas">
+        <div class="slide-inner" id="slideInner">
+          <div class="slide-deco" id="slideDecoEl"></div>
+          <div class="slide-content-area" id="slideContentArea">
+            <div class="slide-text-block slide-heading" contenteditable="true" id="headingEl" oninput="syncSlideData()"></div>
+            <div class="slide-text-block slide-body" contenteditable="true" id="bodyEl" oninput="syncSlideData()"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="properties-panel">
+      <div class="prop-section">
+        <div class="prop-title">Фон слайда</div>
+        <div class="color-grid" id="bgColorGrid"></div>
+      </div>
+      <div class="prop-section">
+        <div class="prop-title">Декорация</div>
+        <div class="layout-grid" id="decoGrid"></div>
+      </div>
+      <div class="prop-section">
+        <div class="prop-title">Расположение</div>
+        <div class="layout-grid" id="layoutGrid"></div>
+      </div>
+      <div class="prop-section">
+        <div class="prop-title">Слайд</div>
+        <button class="btn-sm btn-danger" style="width:100%;justify-content:center" onclick="deleteCurrentSlide()">🗑 Удалить слайд</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEWER -->
+<div class="viewer-screen hidden" id="viewerScreen">
+  <div class="viewer-top">
+    <button class="btn-sm btn-ghost" onclick="closeViewer()">← Назад</button>
+    <span style="font-size:14px;font-weight:600;flex:1" id="viewerTitle"></span>
+    <button class="btn-sm btn-ghost" onclick="viewerExportPDF()">📄 Скачать PDF</button>
+  </div>
+  <div class="viewer-slide-wrap" id="viewerSlideWrap"></div>
+  <div class="viewer-nav">
+    <button class="nav-arr" onclick="viewerNav(-1)">‹</button>
+    <span class="nav-count" id="viewerCount"></span>
+    <button class="nav-arr" onclick="viewerNav(1)">›</button>
+  </div>
+</div>
+
+<script>
+const BG_COLORS = [
+  {id:'b1', css:'#1a1a2e'},{id:'b2', css:'linear-gradient(135deg,#1a1a2e,#16213e)'},
+  {id:'b3', css:'linear-gradient(135deg,#0f3460,#533483)'},{id:'b4', css:'linear-gradient(135deg,#16213e,#0f3460,#533483)'},
+  {id:'b5', css:'linear-gradient(135deg,#1a0533,#3d1250)'},{id:'b6', css:'linear-gradient(135deg,#0d1b2a,#1b4332)'},
+  {id:'b7', css:'linear-gradient(135deg,#2d1b00,#4a2c00)'},{id:'b8', css:'linear-gradient(135deg,#1a0a0a,#3d1515)'},
+  {id:'b9', css:'linear-gradient(135deg,#000000,#1a1a1a)'},{id:'b10',css:'linear-gradient(135deg,#f8f9fa,#e9ecef)'},
+];
+const DECOS = [
+  {id:'none', label:'Нет', fn: () => ''},
+  {id:'circles', label:'Круги', fn: (w,h) => `<svg width="${w}" height="${h}" style="position:absolute;inset:0;width:100%;height:100%"><circle cx="${w*0.85}" cy="${h*0.15}" r="${h*0.35}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/><circle cx="${w*0.85}" cy="${h*0.15}" r="${h*0.2}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/><circle cx="${w*0.1}" cy="${h*0.9}" r="${h*0.25}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></svg>`},
+  {id:'grid', label:'Сетка', fn: (w,h) => `<svg width="${w}" height="${h}" style="position:absolute;inset:0;width:100%;height:100%"><defs><pattern id="g" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/></pattern></defs><rect width="${w}" height="${h}" fill="url(#g)"/></svg>`},
+  {id:'waves', label:'Волны', fn: (w,h) => `<svg width="${w}" height="${h}" style="position:absolute;inset:0;width:100%;height:100%"><path d="M0 ${h*0.7} Q${w*0.25} ${h*0.55} ${w*0.5} ${h*0.7} T${w} ${h*0.7} L${w} ${h} L0 ${h}Z" fill="rgba(255,255,255,0.03)"/><path d="M0 ${h*0.8} Q${w*0.25} ${h*0.65} ${w*0.5} ${h*0.8} T${w} ${h*0.8} L${w} ${h} L0 ${h}Z" fill="rgba(255,255,255,0.04)"/></svg>`},
+  {id:'diagonal', label:'Диаг.', fn: (w,h) => `<svg width="${w}" height="${h}" style="position:absolute;inset:0;width:100%;height:100%"><line x1="0" y1="0" x2="${w*0.6}" y2="${h}" stroke="rgba(255,255,255,0.05)" stroke-width="60"/></svg>`},
+  {id:'dots', label:'Точки', fn: (w,h) => `<svg width="${w}" height="${h}" style="position:absolute;inset:0;width:100%;height:100%"><defs><pattern id="d" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="rgba(255,255,255,0.07)"/></pattern></defs><rect width="${w}" height="${h}" fill="url(#d)"/></svg>`},
+];
+const LAYOUTS = [{id:'center',label:'По центру'},{id:'left',label:'Слева'},{id:'bottom',label:'Снизу'},{id:'top',label:'Сверху'}];
+
+const db = {
+  users: [
+    {id:'u1',username:'demo',email:'demo@slideflow.app',password:'demo123',followers:[],following:[]},
+    {id:'u2',username:'alex_design',email:'alex@test.com',password:'test123',followers:[],following:[]},
+    {id:'u3',username:'maria_k',email:'maria@test.com',password:'test123',followers:[],following:[]},
+  ],
+  presentations: [
+    {id:'p1',userId:'u2',title:'Дизайн в 2025 году',isPrivate:false,createdAt:Date.now()-86400000*2,
+     slides:[
+      {id:'s1',heading:'Дизайн в 2025',body:'Тренды, которые меняют индустрию',bg:'b4',deco:'circles',layout:'center'},
+      {id:'s2',heading:'Минимализм побеждает',body:'Меньше элементов — больше смысла',bg:'b3',deco:'none',layout:'left'},
+      {id:'s3',heading:'AI + Design',body:'Искусственный интеллект как инструмент творчества',bg:'b5',deco:'waves',layout:'center'},
+    ]},
+    {id:'p2',userId:'u3',title:'Стартап-питч: EcoTech',isPrivate:false,createdAt:Date.now()-86400000,
+     slides:[
+      {id:'s1',heading:'EcoTech',body:'Технологии для устойчивого будущего',bg:'b6',deco:'circles',layout:'center'},
+      {id:'s2',heading:'Проблема',body:'40% энергии теряется при передаче',bg:'b9',deco:'grid',layout:'left'},
+      {id:'s3',heading:'Решение',body:'Умная сеть на базе AI',bg:'b6',deco:'none',layout:'center'},
+      {id:'s4',heading:'Рынок: $50B',body:'Ежегодный рост 18%',bg:'b6',deco:'waves',layout:'center'},
+    ]},
+    {id:'p3',userId:'u2',title:'Маркетинг 101',isPrivate:false,createdAt:Date.now()-3600000,
+     slides:[
+      {id:'s1',heading:'Маркетинг 101',body:'Основы современного продвижения',bg:'b7',deco:'diagonal',layout:'center'},
+      {id:'s2',heading:'Целевая аудитория',body:'Знай своего клиента лучше, чем он сам',bg:'b7',deco:'none',layout:'left'},
+    ]},
+  ],
+  likes: {p1:['u3'],p2:['u2','u3'],p3:[]},
+};
+
+let currentUser=null,currentPage='feed',editorSlides=[],editorPresId=null;
+let currentSlideIdx=0,viewerPres=null,viewerSlideIdx=0,isPrivate=false;
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),2500);}
+
+function switchAuthTab(tab){
+  document.getElementById('loginForm').classList.toggle('hidden',tab!=='login');
+  document.getElementById('registerForm').classList.toggle('hidden',tab!=='register');
+  document.getElementById('loginTab').classList.toggle('active',tab==='login');
+  document.getElementById('registerTab').classList.toggle('active',tab==='register');
+}
+
+function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPassword').value;
+  const user=db.users.find(u=>u.email===email&&u.password===pass);
+  if(!user){document.getElementById('loginError').style.display='block';return;}
+  document.getElementById('loginError').style.display='none';
+  loginAs(user);
+}
+
+function doRegister(){
+  const username=document.getElementById('regUsername').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const pass=document.getElementById('regPassword').value;
+  const errEl=document.getElementById('regError');
+  if(!username||!email||!pass){errEl.textContent='Заполните все поля';errEl.style.display='block';return;}
+  if(pass.length<6){errEl.textContent='Пароль минимум 6 символов';errEl.style.display='block';return;}
+  if(db.users.find(u=>u.email===email)){errEl.textContent='Email уже используется';errEl.style.display='block';return;}
+  const user={id:'u'+Date.now(),username,email,password:pass,followers:[],following:[]};
+  db.users.push(user);db.likes[user.id]=[];errEl.style.display='none';loginAs(user);
+}
+
+function loginAs(user){
+  currentUser=user;
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('appScreen').classList.remove('hidden');
+  document.getElementById('navUsername').textContent=user.username;
+  document.getElementById('navAvatar').textContent=user.username[0].toUpperCase();
+  goPage('feed');
+}
+
+function goPage(page,extra){
+  currentPage=page;
+  ['navFeed','navMy','navFollowing'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  if(page==='feed'||page==='following')document.getElementById('navFeed').classList.add('active');
+  if(page==='my')document.getElementById('navMy').classList.add('active');
+  if(page==='following')document.getElementById('navFollowing').classList.add('active');
+  const mc=document.getElementById('mainContent');
+  if(page==='feed')mc.innerHTML=renderFeedHTML();
+  else if(page==='my')mc.innerHTML=renderMyHTML();
+  else if(page==='following')mc.innerHTML=renderFollowingHTML();
+  else if(page==='profile_me')mc.innerHTML=renderProfileHTML(currentUser.id);
+  else if(page==='profile'&&extra)mc.innerHTML=renderProfileHTML(extra);
+}
+
+function getBgStyle(bgId){const b=BG_COLORS.find(x=>x.id===bgId)||BG_COLORS[0];return`background:${b.css}`;}
+function getUserColor(userId){const colors=['#6c63ff','#ff6b9d','#00d4aa','#ffb347','#5271ff','#ff7eb3'];return colors[Math.max(0,db.users.findIndex(u=>u.id===userId)%colors.length)];}
+
+function renderPresCard(pres,showEdit){
+  const user=db.users.find(u=>u.id===pres.userId);
+  const slide=pres.slides[0]||{heading:'',body:'',bg:'b1',deco:'none'};
+  const likes=(db.likes[pres.id]||[]);
+  const liked=likes.includes(currentUser.id);
+  const isOwner=pres.userId===currentUser.id;
+  const uc=getUserColor(pres.userId);
+  const initial=user?user.username[0].toUpperCase():'?';
+  const uname=user?user.username:'Unknown';
+  return`<div class="pres-card" id="pc_${pres.id}">
+    <div class="pres-preview" style="${getBgStyle(slide.bg)}" onclick="openViewer('${pres.id}')">
+      <div class="pres-preview-slide">
+        <div><div style="font-size:14px;font-weight:700;color:white;margin-bottom:4px;text-shadow:0 2px 8px rgba(0,0,0,0.5)">${slide.heading||pres.title}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.6)">${pres.slides.length} слайд${pres.slides.length===1?'':'ов'}</div></div>
+      </div>
+      ${pres.isPrivate?'<div class="pres-private-badge">🔒 Приватная</div>':''}
+    </div>
+    <div class="pres-info">
+      <div class="pres-title">${pres.title}</div>
+      <div class="pres-meta">
+        <div class="pres-author" onclick="event.stopPropagation();goPage('profile','${pres.userId}')">
+          <div class="pres-author-avatar" style="background:${uc};color:white">${initial}</div>
+          <span style="color:var(--text2)">${uname}</span>
+        </div>
+        <div class="pres-actions">
+          ${showEdit&&isOwner?`<button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();openEditor('${pres.id}')">✏️</button>`:''}
+          ${showEdit&&isOwner?`<button class="btn-sm btn-danger" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();deletePres('${pres.id}')">🗑</button>`:''}
+          <button class="like-btn ${liked?'liked':''}" onclick="event.stopPropagation();toggleLike('${pres.id}')">
+            <span class="like-icon">${liked?'♥':'♡'}</span>
+            <span id="lc_${pres.id}">${likes.length}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderFeedHTML(){
+  const q=(document.getElementById('searchInput')?.value||'').toLowerCase();
+  let pres=db.presentations.filter(p=>!p.isPrivate||p.userId===currentUser.id);
+  if(q)pres=pres.filter(p=>p.title.toLowerCase().includes(q));
+  pres=pres.sort((a,b)=>b.createdAt-a.createdAt);
+  return`<div class="feed-page"><div class="feed-header"><div class="feed-title">Лента</div><div class="feed-sub">Последние публичные презентации сообщества</div></div>
+    <div class="presentations-grid">${pres.length?pres.map(p=>renderPresCard(p,false)).join(''):'<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><div class="empty-text">Ничего не найдено</div></div>'}</div></div>`;
+}
+function renderFeed(){if(currentPage==='feed')document.getElementById('mainContent').innerHTML=renderFeedHTML();}
+
+function renderMyHTML(){
+  const myPres=db.presentations.filter(p=>p.userId===currentUser.id).sort((a,b)=>b.createdAt-a.createdAt);
+  return`<div class="feed-page"><div class="feed-header" style="display:flex;align-items:center;justify-content:space-between">
+    <div><div class="feed-title">Мои презентации</div><div class="feed-sub">${myPres.length} презентаций</div></div>
+    <button class="btn-create" onclick="openEditor(null)"><span style="font-size:16px">+</span> Создать</button></div>
+    <div class="presentations-grid">${myPres.length?myPres.map(p=>renderPresCard(p,true)).join(''):'<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">✦</div><div class="empty-text">Ещё нет презентаций</div><div class="empty-sub">Создайте первую прямо сейчас</div><button class="btn-create" style="margin:16px auto 0;display:inline-flex" onclick="openEditor(null)">+ Создать</button></div>'}</div></div>`;
+}
+
+function renderFollowingHTML(){
+  const fids=currentUser.following||[];
+  let pres=db.presentations.filter(p=>fids.includes(p.userId)&&!p.isPrivate).sort((a,b)=>b.createdAt-a.createdAt);
+  return`<div class="feed-page"><div class="feed-header"><div class="feed-title">Подписки</div><div class="feed-sub">Презентации от авторов, на которых вы подписаны</div></div>
+    <div class="presentations-grid">${pres.length?pres.map(p=>renderPresCard(p,false)).join(''):'<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">👥</div><div class="empty-text">Нет обновлений</div><div class="empty-sub">Подпишитесь на авторов в их профиле</div></div>'}</div></div>`;
+}
+
+function renderProfileHTML(userId){
+  const user=db.users.find(u=>u.id===userId);
+  if(!user)return'<div class="empty-state"><div class="empty-text">Пользователь не найден</div></div>';
+  const isMe=userId===currentUser.id;
+  const isFollowing=(currentUser.following||[]).includes(userId);
+  const userPres=db.presentations.filter(p=>p.userId===userId&&(!p.isPrivate||isMe)).sort((a,b)=>b.createdAt-a.createdAt);
+  const uc=getUserColor(userId);
+  return`<div class="profile-page">
+    <div class="profile-header">
+      <div class="profile-avatar" style="background:${uc}">${user.username[0].toUpperCase()}</div>
+      <div><div class="profile-name">${user.username}</div>
+        <div style="font-size:13px;color:var(--text2)">${user.email}</div>
+        <div class="profile-stats">
+          <div class="profile-stat"><strong>${userPres.length}</strong> презентаций</div>
+          <div class="profile-stat"><strong>${(user.followers||[]).length}</strong> подписчиков</div>
+          <div class="profile-stat"><strong>${(user.following||[]).length}</strong> подписок</div>
+        </div></div>
+      ${!isMe?`<button class="follow-btn ${isFollowing?'following':'follow'}" id="followBtn_${userId}" onclick="toggleFollow('${userId}')">${isFollowing?'✓ Подписан':'+ Подписаться'}</button>`:`<button class="follow-btn follow" style="margin-left:auto" onclick="openEditor(null)">+ Создать</button>`}
+    </div>
+    <div class="profile-pres-title">${isMe?'Мои презентации':`Презентации ${user.username}`}</div>
+    <div class="presentations-grid">${userPres.length?userPres.map(p=>renderPresCard(p,isMe)).join(''):'<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📭</div><div class="empty-text">Нет презентаций</div></div>'}</div>
+  </div>`;
+}
+
+function toggleLike(presId){
+  if(!db.likes[presId])db.likes[presId]=[];
+  const idx=db.likes[presId].indexOf(currentUser.id);
+  if(idx>=0)db.likes[presId].splice(idx,1);else db.likes[presId].push(currentUser.id);
+  const btn=document.querySelector(`#pc_${presId} .like-btn`);
+  const cnt=document.getElementById(`lc_${presId}`);
+  if(btn)btn.classList.toggle('liked',idx<0);
+  if(btn)btn.querySelector('.like-icon').textContent=idx<0?'♥':'♡';
+  if(cnt)cnt.textContent=db.likes[presId].length;
+}
+
+function toggleFollow(userId){
+  const user=db.users.find(u=>u.id===userId);if(!user)return;
+  if(!currentUser.following)currentUser.following=[];if(!user.followers)user.followers=[];
+  const idx=currentUser.following.indexOf(userId);
+  if(idx>=0){currentUser.following.splice(idx,1);user.followers.splice(user.followers.indexOf(currentUser.id),1);}
+  else{currentUser.following.push(userId);user.followers.push(currentUser.id);showToast(`Вы подписались на ${user.username}`);}
+  const btn=document.getElementById(`followBtn_${userId}`);
+  if(btn){const isF=currentUser.following.includes(userId);btn.className=`follow-btn ${isF?'following':'follow'}`;btn.textContent=isF?'✓ Подписан':'+ Подписаться';}
+}
+
+function deletePres(presId){
+  const idx=db.presentations.findIndex(p=>p.id===presId);
+  if(idx>=0)db.presentations.splice(idx,1);
+  goPage(currentPage);showToast('Презентация удалена');
+}
+
+function openEditor(presId){
+  editorPresId=presId;
+  if(presId){
+    const p=db.presentations.find(x=>x.id===presId);if(!p)return;
+    editorSlides=JSON.parse(JSON.stringify(p.slides));
+    document.getElementById('editorTitleInput').value=p.title;
+    isPrivate=p.isPrivate;
+  }else{
+    editorSlides=[{id:'s'+Date.now(),heading:'Новый заголовок',body:'Описание слайда',bg:'b1',deco:'none',layout:'center'}];
+    document.getElementById('editorTitleInput').value='';isPrivate=false;
+  }
+  document.getElementById('privacyToggle').classList.toggle('on',isPrivate);
+  currentSlideIdx=0;
+  document.getElementById('editorScreen').classList.remove('hidden');
+  buildEditorPanels();renderSlideThumbs();loadSlide(0);
+}
+
+function closeEditor(){document.getElementById('editorScreen').classList.add('hidden');}
+function togglePrivacy(){isPrivate=!isPrivate;document.getElementById('privacyToggle').classList.toggle('on',isPrivate);}
+
+function buildEditorPanels(){
+  document.getElementById('bgColorGrid').innerHTML=BG_COLORS.map(b=>`<div class="color-swatch" id="swatch_${b.id}" style="background:${b.css}" onclick="setBg('${b.id}')"></div>`).join('');
+  document.getElementById('decoGrid').innerHTML=DECOS.map(d=>`<button class="layout-btn" id="deco_${d.id}" onclick="setDeco('${d.id}')">${d.label}</button>`).join('');
+  document.getElementById('layoutGrid').innerHTML=LAYOUTS.map(l=>`<button class="layout-btn" id="layout_${l.id}" onclick="setLayout('${l.id}')">${l.label}</button>`).join('');
+}
+
+function renderSlideThumbs(){
+  const panel=document.getElementById('slidesPanel');
+  panel.innerHTML=editorSlides.map((s,i)=>`<div class="slide-thumb ${i===currentSlideIdx?'active':''}" id="thumb_${i}" onclick="loadSlide(${i})">
+    <div class="slide-thumb-inner" style="${getBgStyle(s.bg)}">
+      <div style="font-size:8px;color:white;font-weight:600;text-align:center;text-shadow:0 1px 4px rgba(0,0,0,0.8)">${s.heading||'Слайд'}</div>
+      <div class="slide-num">${i+1}</div>
+    </div></div>`).join('')+`<button class="add-slide-btn" onclick="addSlide()">+ Слайд</button>`;
+  document.getElementById('slideCounter').textContent=`${currentSlideIdx+1} / ${editorSlides.length}`;
+}
+
+function loadSlide(idx){
+  currentSlideIdx=idx;const s=editorSlides[idx];
+  document.getElementById('headingEl').textContent=s.heading||'';
+  document.getElementById('bodyEl').textContent=s.body||'';
+  applySlideStyle(s);renderSlideThumbs();updatePanelSelections(s);
+}
+
+function applySlideStyle(s){
+  const inner=document.getElementById('slideInner');
+  inner.style.cssText=`width:100%;height:100%;position:relative;display:flex;${getBgStyle(s.bg)}`;
+  const deco=DECOS.find(d=>d.id===s.deco)||DECOS[0];
+  document.getElementById('slideDecoEl').innerHTML=deco.fn(1280,720);
+  const ca=document.getElementById('slideContentArea');
+  ca.style.justifyContent=s.layout==='top'?'flex-start':s.layout==='bottom'?'flex-end':'center';
+  ca.style.alignItems=s.layout==='left'?'flex-start':'center';
+  ca.style.textAlign=s.layout==='left'?'left':'center';
+}
+
+function updatePanelSelections(s){
+  document.querySelectorAll('.color-swatch').forEach(el=>el.classList.remove('active'));
+  const sw=document.getElementById(`swatch_${s.bg}`);if(sw)sw.classList.add('active');
+  document.querySelectorAll('#decoGrid .layout-btn').forEach(el=>el.classList.remove('active'));
+  const de=document.getElementById(`deco_${s.deco}`);if(de)de.classList.add('active');
+  document.querySelectorAll('#layoutGrid .layout-btn').forEach(el=>el.classList.remove('active'));
+  const lb=document.getElementById(`layout_${s.layout||'center'}`);if(lb)lb.classList.add('active');
+}
+
+function syncSlideData(){
+  if(!editorSlides[currentSlideIdx])return;
+  editorSlides[currentSlideIdx].heading=document.getElementById('headingEl').textContent;
+  editorSlides[currentSlideIdx].body=document.getElementById('bodyEl').textContent;
+  const th=document.getElementById(`thumb_${currentSlideIdx}`);
+  if(th)th.querySelector('.slide-thumb-inner div').textContent=editorSlides[currentSlideIdx].heading||'Слайд';
+}
+
+function setBg(bgId){editorSlides[currentSlideIdx].bg=bgId;applySlideStyle(editorSlides[currentSlideIdx]);updatePanelSelections(editorSlides[currentSlideIdx]);renderSlideThumbs();}
+function setDeco(decoId){editorSlides[currentSlideIdx].deco=decoId;applySlideStyle(editorSlides[currentSlideIdx]);updatePanelSelections(editorSlides[currentSlideIdx]);}
+function setLayout(layoutId){editorSlides[currentSlideIdx].layout=layoutId;applySlideStyle(editorSlides[currentSlideIdx]);updatePanelSelections(editorSlides[currentSlideIdx]);}
+
+function addSlide(){
+  editorSlides.push({id:'s'+Date.now(),heading:'Новый заголовок',body:'Текст слайда',bg:'b1',deco:'none',layout:'center'});
+  currentSlideIdx=editorSlides.length-1;renderSlideThumbs();loadSlide(currentSlideIdx);
+}
+
+function deleteCurrentSlide(){
+  if(editorSlides.length<=1){showToast('Нельзя удалить единственный слайд');return;}
+  editorSlides.splice(currentSlideIdx,1);currentSlideIdx=Math.min(currentSlideIdx,editorSlides.length-1);
+  renderSlideThumbs();loadSlide(currentSlideIdx);
+}
+
+function savePresentation(){
+  syncSlideData();
+  const title=document.getElementById('editorTitleInput').value.trim()||'Без названия';
+  if(editorPresId){
+    const p=db.presentations.find(x=>x.id===editorPresId);
+    if(p){p.title=title;p.slides=editorSlides;p.isPrivate=isPrivate;}
+  }else{
+    const np={id:'p'+Date.now(),userId:currentUser.id,title,isPrivate,createdAt:Date.now(),slides:editorSlides};
+    db.presentations.push(np);db.likes[np.id]=[];
+  }
+  closeEditor();goPage('my');showToast('Презентация сохранена!');
+}
+
+function openViewer(presId){
+  const p=db.presentations.find(x=>x.id===presId);if(!p)return;
+  if(p.isPrivate&&p.userId!==currentUser.id){showToast('Эта презентация приватная');return;}
+  viewerPres=p;viewerSlideIdx=0;
+  document.getElementById('viewerTitle').textContent=p.title;
+  document.getElementById('viewerScreen').classList.remove('hidden');
+  renderViewerSlide();
+}
+
+function closeViewer(){document.getElementById('viewerScreen').classList.add('hidden');viewerPres=null;}
+
+function renderViewerSlide(){
+  const s=viewerPres.slides[viewerSlideIdx];
+  const deco=DECOS.find(d=>d.id===s.deco)||DECOS[0];
+  const decoHTML=deco.fn(1280,720);
+  const just=s.layout==='top'?'flex-start':s.layout==='bottom'?'flex-end':'center';
+  const align=s.layout==='left'?'flex-start':'center';
+  const ta=s.layout==='left'?'left':'center';
+  document.getElementById('viewerSlideWrap').innerHTML=`
+    <div style="width:100%;height:100%;position:relative;display:flex;${getBgStyle(s.bg)}">
+      <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden">${decoHTML}</div>
+      <div style="position:absolute;inset:0;padding:48px;display:flex;flex-direction:column;justify-content:${just};align-items:${align};text-align:${ta};gap:16px;z-index:2">
+        <div style="font-size:clamp(20px,3.5vw,42px);font-weight:800;color:white;line-height:1.2;font-family:'Manrope',sans-serif;text-shadow:0 2px 16px rgba(0,0,0,0.3)">${s.heading||''}</div>
+        <div style="font-size:clamp(12px,1.8vw,20px);color:rgba(255,255,255,0.8);line-height:1.6;font-family:'Manrope',sans-serif;max-width:80%">${s.body||''}</div>
+      </div>
+    </div>`;
+  document.getElementById('viewerCount').textContent=`${viewerSlideIdx+1} / ${viewerPres.slides.length}`;
+}
+
+function viewerNav(dir){viewerSlideIdx=Math.max(0,Math.min(viewerPres.slides.length-1,viewerSlideIdx+dir));renderViewerSlide();}
+
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('viewerScreen').classList.contains('hidden'))return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')viewerNav(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')viewerNav(-1);
+  if(e.key==='Escape')closeViewer();
+});
+
+function wrapText(ctx,text,x,y,maxW,lineH){
+  const words=text.split(' ');let line='';
+  for(const word of words){const test=line+word+' ';if(ctx.measureText(test).width>maxW&&line){ctx.fillText(line.trim(),x,y);line=word+' ';y+=lineH;}else line=test;}
+  if(line)ctx.fillText(line.trim(),x,y);
+}
+
+async function buildPDFDoc(pres){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'px',format:[1280,720]});
+  const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;
+  const ctx=canvas.getContext('2d');
+  for(let i=0;i<pres.slides.length;i++){
+    const s=pres.slides[i];if(i>0)doc.addPage();
+    const bg=BG_COLORS.find(b=>b.id===s.bg)||BG_COLORS[0];
+    const color=bg.css.startsWith('#')?bg.css:bg.css.match(/#[0-9a-fA-F]{6}/)?.[0]||'#1a1a2e';
+    ctx.fillStyle=color;ctx.fillRect(0,0,1280,720);
+    ctx.textAlign=s.layout==='left'?'left':'center';
+    const cx=s.layout==='left'?80:640;
+    const cy=s.layout==='top'?120:s.layout==='bottom'?580:300;
+    ctx.fillStyle='white';ctx.font='bold 56px sans-serif';
+    wrapText(ctx,s.heading||'',cx,cy,1100,64);
+    ctx.fillStyle='rgba(255,255,255,0.75)';ctx.font='28px sans-serif';
+    wrapText(ctx,s.body||'',cx,cy+100,1000,36);
+    doc.addImage(canvas.toDataURL('image/jpeg',0.85),'JPEG',0,0,1280,720);
+  }
+  return doc;
+}
+
+async function exportPDF(){
+  syncSlideData();const title=document.getElementById('editorTitleInput').value.trim()||'presentation';
+  showToast('Создание PDF...');
+  const doc=await buildPDFDoc({slides:editorSlides,title});doc.save(title+'.pdf');
+}
+
+async function viewerExportPDF(){
+  showToast('Создание PDF...');
+  const doc=await buildPDFDoc(viewerPres);doc.save(viewerPres.title+'.pdf');
+}
+
+document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+</script>
+</body>
+</html>
